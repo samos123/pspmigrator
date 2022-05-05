@@ -19,6 +19,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"path/filepath"
@@ -85,6 +86,11 @@ func main() {
 		mutating, fields, annotations := pspmigrator.IsPSPMutating(pspObj)
 		fmt.Printf("PSP %v mutating: %v\n", pspName, mutating)
 		fmt.Println(fields, annotations)
+		pspJson, err := json.Marshal(pspObj)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(pspJson))
 	}
 
 	// Examples for error handling:
