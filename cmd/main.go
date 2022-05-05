@@ -81,7 +81,7 @@ func main() {
 	} else if err != nil {
 		panic(err.Error())
 	} else {
-		fmt.Printf("%#v\n", pspObj)
+		fmt.Printf("%#v\n", pspObj.Spec)
 		mutating, fields, annotations := pspmigrator.IsPSPMutating(pspObj)
 		fmt.Printf("PSP %v mutating: %v\n", pspName, mutating)
 		fmt.Println(fields, annotations)
