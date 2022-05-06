@@ -71,7 +71,7 @@ func IsPSPMutating(pspObj *v1beta1.PodSecurityPolicy) (bool, []string, []string)
 	if pspObj.Spec.DefaultAllowPrivilegeEscalation != nil {
 		fields = append(fields, "DefaultAllowPrivilegeEscalation")
 	}
-	if *pspObj.Spec.AllowPrivilegeEscalation != true {
+	if pspObj.Spec.AllowPrivilegeEscalation != nil && *pspObj.Spec.AllowPrivilegeEscalation != true {
 		fields = append(fields, "AllowPrivilegeEscalation")
 	}
 
