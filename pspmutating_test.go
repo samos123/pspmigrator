@@ -76,7 +76,6 @@ func TestIsPSPMutatingDefaultAddCapabilitiesOnly(t *testing.T) {
 }
 
 func TestIsPSPMutatingAnnotation(t *testing.T) {
-
 	pspObj := GeneratePSPObject(PSPOptions{Annotations: map[string]string{"seccomp.security.alpha.kubernetes.io/defaultProfileName": "a"}})
 	yes, fields, annotations := IsPSPMutating(&pspObj)
 	fmt.Println("Mutating, fields, annotations:", yes, fields, annotations)

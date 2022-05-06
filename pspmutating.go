@@ -1,49 +1,20 @@
 package pspmigrator
 
 import (
-	"reflect"
-
 	"k8s.io/api/policy/v1beta1"
 )
 
-// source https://stackoverflow.com/questions/13476349/check-for-nil-and-nil-interface-in-go
-func isNil(c interface{}) bool {
-	return c == nil || (reflect.ValueOf(c).Kind() == reflect.Ptr && reflect.ValueOf(c).IsNil())
-}
-
-func IsPSPMutating(pspObj *v1beta1.PodSecurityPolicy) (bool, []string, []string) {
+// IsPSPMutating checks wheter a PodSecurityPolicy is potentially mutating
+// pods. It returns true if one of the fields or annotations used in the
+// PodSecurityPolicy is suspected to be mutating pods. The field or annotations
+// that are suspected to be mutating are returned as well.
+func IsPSPMutating(pspObj *v1beta1.PodSecurityPolicy) (mutating bool, fields, annotations []string) {
 	// check if associated PSP object is using any mutating fields
 	// if yes then lookup ownerReferences and see if the field is actually mutating
 	// if no continue check for next pod
-	fields := make([]string, 0)
-	annotations := make([]string, 0)
+	fields = make([]string, 0)
+	annotations = make([]string, 0)
 
-	//	mutatingFields := make(map[string]bool)
-	//	mutatingFields["defaultAddCapabilities"] = true
-	//	mutatingFields["requiredDropCapabilities"] = true
-	//	mutatingFields["seLinux"] = true
-	//	mutatingFields["runAsUser"] = true
-	//	mutatingFields["runAsGroup"] = true
-	//	mutatingFields["supplementalGroups"] = true
-	//	mutatingFields["fsGroup"] = true
-	//	mutatingFields["readOnlyRootFilesystem"] = true
-	//	mutatingFields["defaultAllowPrivilegeEscalation"] = true
-	//	mutatingFields["allowPrivilegeEscalation"] = true
-	//
-	//	for field, value := range pspObjMap {
-	//		rValue := reflect.ValueOf(value)
-	//		// Some PSP fields aren't actually set, this captures those
-	//		if rValue.Kind() == reflect.Map && rValue.Len() == 0 {
-	//			continue
-	//		}
-	//		//		if (field == "seLinux" || field == "runAsUser") {
-	//		//			continue
-	//		//		}
-	//		if _, ok := mutatingFields[field]; ok {
-	//			fmt.Println(value, reflect.ValueOf(value).Kind())
-	//			fields = append(fields, field)
-	//		}
-	//	}
 	if len(pspObj.Spec.DefaultAddCapabilities) > 0 {
 		fields = append(fields, "DefaultAddCapabilities")
 	}
