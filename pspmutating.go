@@ -3,6 +3,7 @@ package pspmigrator
 import (
 	"context"
 	"fmt"
+	"log"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/policy/v1beta1"
@@ -29,8 +30,24 @@ func IsPodBeingMutatedByPSP(pod *v1.Pod, clientset *kubernetes.Clientset) (bool,
 			}
 			fmt.Println(fields, annotations)
 			// Lookup ownerReferences and compare pod spec with owner pod spec
-			//			fmt.Printf("%#v\n", pods.Items[0].ObjectMeta.OwnerReferences)
-			return true, nil
+			if len(pod.ObjectMeta.OwnerReferences) > 0 {
+				var owner metav1.OwnerReference
+				for _, reference := range pod.ObjectMeta.OwnerReferences {
+					if reference.Controller != nil && *reference.Controller == true {
+						owner = reference
+						break
+					}
+				}
+				if owner.Kind == "ReplicaSet" {
+					rs, err := clientset.AppsV1().ReplicaSets(pod.Namespace).Get(context.TODO(), owner.Name, metav1.GetOptions{})
+					if err != nil {
+						return false, err
+					}
+					parentPodSpec := rs.Spec.Template.Spec
+					log.Println(parentPodSpec)
+				}
+				return true, nil
+			}
 		}
 	}
 	return false, nil
@@ -57,7 +74,7 @@ func IsPSPMutating(pspObj *v1beta1.PodSecurityPolicy) (mutating bool, fields, an
 	if pspObj.Spec.RunAsUser.Rule != v1beta1.RunAsUserStrategyRunAsAny {
 		fields = append(fields, "RunAsUser")
 	}
-	if pspObj.Spec.RunAsGroup != nil && pspObj.Spec.RunAsGroup.Rule != v1beta1.RunAsGroupStrategyRunAsAny {
+	if pspObj.Spec.RunAsGroup != nil && pspObj.Spec.RunAsGroup.Rule == v1beta1.RunAsGroupStrategyMustRunAs {
 		fields = append(fields, "RunAsGroup")
 	}
 	if pspObj.Spec.SupplementalGroups.Rule != v1beta1.SupplementalGroupsStrategyRunAsAny {

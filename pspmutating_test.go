@@ -12,6 +12,7 @@ import (
 type PSPOptions struct {
 	Annotations            map[string]string
 	DefaultAddCapabilities []string
+	RunAsGroup             map[string]string
 }
 
 func GeneratePSPObject(options PSPOptions) v1beta1.PodSecurityPolicy {
