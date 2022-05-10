@@ -3,7 +3,7 @@ module github.com/samos123/pspmigrator
 go 1.18
 
 require (
-	github.com/deckarep/golang-set v1.8.0
+	github.com/go-test/deep v1.0.8
 	k8s.io/api v0.23.6
 	k8s.io/apimachinery v0.23.6
 	k8s.io/client-go v0.23.6

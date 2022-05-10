@@ -5,12 +5,46 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/go-test/deep"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
+
+func GetSecurityContexts(podSpec v1.PodSpec) []*v1.SecurityContext {
+	scs := make([]*v1.SecurityContext, 0)
+	for _, c := range podSpec.Containers {
+		scs = append(scs, c.SecurityContext)
+	}
+	fmt.Println("scs", scs)
+	return scs
+}
+
+func IsPodBeingMutatedByPSPDirect(pod *v1.Pod, clientset *kubernetes.Clientset) (bool, error) {
+	if len(pod.ObjectMeta.OwnerReferences) > 0 {
+		var owner metav1.OwnerReference
+		for _, reference := range pod.ObjectMeta.OwnerReferences {
+			if reference.Controller != nil && *reference.Controller == true {
+				owner = reference
+				break
+			}
+		}
+		var parentPod v1.PodTemplateSpec
+		if owner.Kind == "ReplicaSet" {
+			rs, err := clientset.AppsV1().ReplicaSets(pod.Namespace).Get(context.TODO(), owner.Name, metav1.GetOptions{})
+			if err != nil {
+				return false, err
+			}
+			parentPod = rs.Spec.Template
+		}
+		if diff := deep.Equal(GetSecurityContexts(parentPod.Spec), GetSecurityContexts(pod.Spec)); diff != nil {
+			return true, fmt.Errorf("parent pod spec containers SecurityContext was different from running pod spec, the differences were: %s", diff)
+		}
+	}
+	return false, nil
+}
 
 func IsPodBeingMutatedByPSP(pod *v1.Pod, clientset *kubernetes.Clientset) (bool, error) {
 	// check if associated PSP object is using any mutating fields

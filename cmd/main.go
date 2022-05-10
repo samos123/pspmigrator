@@ -97,8 +97,8 @@ func main() {
 	// - Use helper functions like e.g. errors.IsNotFound()
 	// - And/or cast to StatusError and use its properties like e.g. ErrStatus.Message
 	namespace := "default"
-	pod := "nginx-nonpriv-66b6c48dd5-p6c4h"
-	_, err = clientset.CoreV1().Pods(namespace).Get(context.TODO(), pod, metav1.GetOptions{})
+	pod := "nginx-nonpriv-66b6c48dd5-rl6jt"
+	podObj, err := clientset.CoreV1().Pods(namespace).Get(context.TODO(), pod, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
 		fmt.Printf("Pod %s in namespace %s not found\n", pod, namespace)
 	} else if statusError, isStatus := err.(*errors.StatusError); isStatus {
@@ -108,5 +108,7 @@ func main() {
 		panic(err.Error())
 	} else {
 		fmt.Printf("Found pod %s in namespace %s\n", pod, namespace)
+		mutating, err := pspmigrator.IsPodBeingMutatedByPSPDirect(podObj, clientset)
+		fmt.Println(mutating, err)
 	}
 }

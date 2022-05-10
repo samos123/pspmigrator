@@ -84,3 +84,7 @@ func TestIsPSPMutatingAnnotation(t *testing.T) {
 		t.Error("Mutating should be true but was false")
 	}
 }
+
+func TestIsPSPMutatingPodTrue(t *testing.T) {
+
+}
