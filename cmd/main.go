@@ -108,7 +108,7 @@ func main() {
 		panic(err.Error())
 	} else {
 		fmt.Printf("Found pod %s in namespace %s\n", pod, namespace)
-		mutating, err := pspmigrator.IsPodBeingMutatedByPSPDirect(podObj, clientset)
+		mutating, err := pspmigrator.IsPodBeingMutatedByPSP(podObj, clientset)
 		fmt.Println(mutating, err)
 	}
 }

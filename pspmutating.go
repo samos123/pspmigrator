@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/go-test/deep"
 	v1 "k8s.io/api/core/v1"
@@ -13,7 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func GetSecurityContexts(podSpec v1.PodSpec) []*v1.SecurityContext {
+func GetContainerSecurityContexts(podSpec v1.PodSpec) []*v1.SecurityContext {
 	scs := make([]*v1.SecurityContext, 0)
 	for _, c := range podSpec.Containers {
 		scs = append(scs, c.SecurityContext)
@@ -22,7 +23,17 @@ func GetSecurityContexts(podSpec v1.PodSpec) []*v1.SecurityContext {
 	return scs
 }
 
-func IsPodBeingMutatedByPSPDirect(pod *v1.Pod, clientset *kubernetes.Clientset) (bool, error) {
+func GetPSPAnnotations(annotations map[string]string) map[string]string {
+	pspAnnotations := make(map[string]string)
+	for ann, val := range annotations {
+		if strings.Contains(ann, "seccomp.security") || strings.Contains(ann, "apparmor.security") {
+			pspAnnotations[ann] = val
+		}
+	}
+	return pspAnnotations
+}
+
+func IsPodBeingMutatedByPSP(pod *v1.Pod, clientset *kubernetes.Clientset) (bool, error) {
 	if len(pod.ObjectMeta.OwnerReferences) > 0 {
 		var owner metav1.OwnerReference
 		for _, reference := range pod.ObjectMeta.OwnerReferences {
@@ -39,14 +50,20 @@ func IsPodBeingMutatedByPSPDirect(pod *v1.Pod, clientset *kubernetes.Clientset) 
 			}
 			parentPod = rs.Spec.Template
 		}
-		if diff := deep.Equal(GetSecurityContexts(parentPod.Spec), GetSecurityContexts(pod.Spec)); diff != nil {
-			return true, fmt.Errorf("parent pod spec containers SecurityContext was different from running pod spec, the differences were: %s", diff)
+		if diff := deep.Equal(GetContainerSecurityContexts(parentPod.Spec), GetContainerSecurityContexts(pod.Spec)); diff != nil {
+			return true, nil
+		}
+		if diff := deep.Equal(parentPod.Spec.SecurityContext, pod.Spec.SecurityContext); diff != nil {
+			return true, nil
+		}
+		if diff := deep.Equal(GetPSPAnnotations(parentPod.ObjectMeta.Annotations), GetPSPAnnotations(pod.ObjectMeta.Annotations)); diff != nil {
+			return true, nil
 		}
 	}
 	return false, nil
 }
 
-func IsPodBeingMutatedByPSP(pod *v1.Pod, clientset *kubernetes.Clientset) (bool, error) {
+func IsPodBeingMutatedByPSPOld(pod *v1.Pod, clientset *kubernetes.Clientset) (bool, error) {
 	// check if associated PSP object is using any mutating fields
 	// if yes then lookup ownerReferences and see if the field is actually mutating
 	// if no continue check for next pod
@@ -85,7 +102,6 @@ func IsPodBeingMutatedByPSP(pod *v1.Pod, clientset *kubernetes.Clientset) (bool,
 		}
 	}
 	return false, nil
-
 }
 
 // IsPSPMutating checks wheter a PodSecurityPolicy is potentially mutating
