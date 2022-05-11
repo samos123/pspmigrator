@@ -33,7 +33,8 @@ func GetPSPAnnotations(annotations map[string]string) map[string]string {
 	return pspAnnotations
 }
 
-func IsPodBeingMutatedByPSP(pod *v1.Pod, clientset *kubernetes.Clientset) (bool, error) {
+func IsPodBeingMutatedByPSP(pod *v1.Pod, clientset *kubernetes.Clientset) (mutating bool, diff []string, err error) {
+	diff = make([]string, 0)
 	if len(pod.ObjectMeta.OwnerReferences) > 0 {
 		var owner metav1.OwnerReference
 		for _, reference := range pod.ObjectMeta.OwnerReferences {
@@ -46,21 +47,21 @@ func IsPodBeingMutatedByPSP(pod *v1.Pod, clientset *kubernetes.Clientset) (bool,
 		if owner.Kind == "ReplicaSet" {
 			rs, err := clientset.AppsV1().ReplicaSets(pod.Namespace).Get(context.TODO(), owner.Name, metav1.GetOptions{})
 			if err != nil {
-				return false, err
+				return false, diff, err
 			}
 			parentPod = rs.Spec.Template
 		}
-		if diff := deep.Equal(GetContainerSecurityContexts(parentPod.Spec), GetContainerSecurityContexts(pod.Spec)); diff != nil {
-			return true, nil
+		if diff = deep.Equal(GetContainerSecurityContexts(parentPod.Spec), GetContainerSecurityContexts(pod.Spec)); diff != nil {
+			return true, diff, nil
 		}
 		if diff := deep.Equal(parentPod.Spec.SecurityContext, pod.Spec.SecurityContext); diff != nil {
-			return true, nil
+			return true, diff, nil
 		}
 		if diff := deep.Equal(GetPSPAnnotations(parentPod.ObjectMeta.Annotations), GetPSPAnnotations(pod.ObjectMeta.Annotations)); diff != nil {
-			return true, nil
+			return true, diff, nil
 		}
 	}
-	return false, nil
+	return false, diff, nil
 }
 
 func IsPodBeingMutatedByPSPOld(pod *v1.Pod, clientset *kubernetes.Clientset) (bool, error) {

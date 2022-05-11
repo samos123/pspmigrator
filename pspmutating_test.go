@@ -258,7 +258,8 @@ func TestIngreation(t *testing.T) {
 				t.Errorf("Expected only a single pod, but got %v pods", len(pods.Items))
 			}
 			pod := pods.Items[0]
-			mutated, err := IsPodBeingMutatedByPSP(&pod, clientset)
+			mutated, diff, err := IsPodBeingMutatedByPSP(&pod, clientset)
+			fmt.Println(diff)
 			if mutated != tc.Expected {
 				t.Errorf("Expected mutated to be %v but got %v", tc.Expected, mutated)
 			}
