@@ -19,7 +19,6 @@ func GetContainerSecurityContexts(podSpec v1.PodSpec) []*v1.SecurityContext {
 	for _, c := range podSpec.Containers {
 		scs = append(scs, c.SecurityContext)
 	}
-	fmt.Println("scs", scs)
 	return scs
 }
 
@@ -50,6 +49,16 @@ func IsPodBeingMutatedByPSP(pod *v1.Pod, clientset *kubernetes.Clientset) (mutat
 				return false, diff, err
 			}
 			parentPod = rs.Spec.Template
+		}
+		if owner.Kind == "DaemonSet" {
+			rs, err := clientset.AppsV1().DaemonSets(pod.Namespace).Get(context.TODO(), owner.Name, metav1.GetOptions{})
+			if err != nil {
+				return false, diff, err
+			}
+			parentPod = rs.Spec.Template
+		}
+		if owner.Kind == "Node" {
+			return false, diff, fmt.Errorf("Pod with ownerReference of kind Node is not supported. OwnerReference of pod %v was %#v", pod.Name, owner)
 		}
 		if diff = deep.Equal(GetContainerSecurityContexts(parentPod.Spec), GetContainerSecurityContexts(pod.Spec)); diff != nil {
 			return true, diff, nil

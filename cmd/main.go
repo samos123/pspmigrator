@@ -19,13 +19,12 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"path/filepath"
 
 	"github.com/samos123/pspmigrator"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -67,48 +66,14 @@ func main() {
 		panic(err.Error())
 	}
 	fmt.Printf("There are %d pods in the cluster\n", len(pods.Items))
-	fmt.Printf("%#v\n", pods.Items[0].ObjectMeta.OwnerReferences)
-	fmt.Printf("PSP used: %v\n", pods.Items[0].ObjectMeta.Annotations["kubernetes.io/psp"])
-	pspName := pods.Items[0].ObjectMeta.Annotations["kubernetes.io/psp"]
-
-	fmt.Printf("%#v", clientset.ExtensionsV1beta1)
-
-	pspObj, err := clientset.PolicyV1beta1().PodSecurityPolicies().Get(context.TODO(), pspName, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		fmt.Printf("PodSecurityPolicy %s not found\n", pspName)
-	} else if statusError, isStatus := err.(*errors.StatusError); isStatus {
-		fmt.Printf("Error getting PodSecurityPolicy %s: %v\n",
-			pspName, statusError.ErrStatus.Message)
-	} else if err != nil {
-		panic(err.Error())
-	} else {
-		fmt.Printf("%#v\n", pspObj.Spec)
-		mutating, fields, annotations := pspmigrator.IsPSPMutating(pspObj)
-		fmt.Printf("PSP %v mutating: %v\n", pspName, mutating)
-		fmt.Println(fields, annotations)
-		pspJson, err := json.Marshal(pspObj)
-		if err != nil {
-			panic(err)
+	for _, pod := range pods.Items {
+		if pspName, ok := pod.ObjectMeta.Annotations["kubernetes.io/psp"]; ok {
+			mutated, diff, err := pspmigrator.IsPodBeingMutatedByPSP(&pod, clientset)
+			if err != nil {
+				log.Println(err)
+			}
+			fmt.Printf("Pod %v is mutated by PSP %v: %v, diff: %v\n", pod.Name, pspName, mutated, diff)
 		}
-		fmt.Println(string(pspJson))
 	}
 
-	// Examples for error handling:
-	// - Use helper functions like e.g. errors.IsNotFound()
-	// - And/or cast to StatusError and use its properties like e.g. ErrStatus.Message
-	namespace := "default"
-	pod := "nginx-nonpriv-66b6c48dd5-rl6jt"
-	podObj, err := clientset.CoreV1().Pods(namespace).Get(context.TODO(), pod, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		fmt.Printf("Pod %s in namespace %s not found\n", pod, namespace)
-	} else if statusError, isStatus := err.(*errors.StatusError); isStatus {
-		fmt.Printf("Error getting pod %s in namespace %s: %v\n",
-			pod, namespace, statusError.ErrStatus.Message)
-	} else if err != nil {
-		panic(err.Error())
-	} else {
-		fmt.Printf("Found pod %s in namespace %s\n", pod, namespace)
-		mutating, err := pspmigrator.IsPodBeingMutatedByPSP(podObj, clientset)
-		fmt.Println(mutating, err)
-	}
 }
