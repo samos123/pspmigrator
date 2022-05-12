@@ -51,24 +51,27 @@ func IsPodBeingMutatedByPSP(pod *v1.Pod, clientset *kubernetes.Clientset) (mutat
 			parentPod = rs.Spec.Template
 		}
 		if owner.Kind == "DaemonSet" {
-			rs, err := clientset.AppsV1().DaemonSets(pod.Namespace).Get(context.TODO(), owner.Name, metav1.GetOptions{})
+			ds, err := clientset.AppsV1().DaemonSets(pod.Namespace).Get(context.TODO(), owner.Name, metav1.GetOptions{})
 			if err != nil {
 				return false, diff, err
 			}
-			parentPod = rs.Spec.Template
+			parentPod = ds.Spec.Template
 		}
 		if owner.Kind == "Node" {
 			return false, diff, fmt.Errorf("Pod with ownerReference of kind Node is not supported. OwnerReference of pod %v was %#v", pod.Name, owner)
 		}
-		if diff = deep.Equal(GetContainerSecurityContexts(parentPod.Spec), GetContainerSecurityContexts(pod.Spec)); diff != nil {
-			return true, diff, nil
+		if diffNew := deep.Equal(GetContainerSecurityContexts(parentPod.Spec), GetContainerSecurityContexts(pod.Spec)); diffNew != nil {
+			diff = append(diff, diffNew...)
 		}
-		if diff := deep.Equal(parentPod.Spec.SecurityContext, pod.Spec.SecurityContext); diff != nil {
-			return true, diff, nil
+		if diffNew := deep.Equal(parentPod.Spec.SecurityContext, pod.Spec.SecurityContext); diffNew != nil {
+			diff = append(diff, diffNew...)
 		}
-		if diff := deep.Equal(GetPSPAnnotations(parentPod.ObjectMeta.Annotations), GetPSPAnnotations(pod.ObjectMeta.Annotations)); diff != nil {
-			return true, diff, nil
+		if diffNew := deep.Equal(GetPSPAnnotations(parentPod.ObjectMeta.Annotations), GetPSPAnnotations(pod.ObjectMeta.Annotations)); diffNew != nil {
+			diff = append(diff, diffNew...)
 		}
+	}
+	if len(diff) > 0 {
+		return true, diff, nil
 	}
 	return false, diff, nil
 }

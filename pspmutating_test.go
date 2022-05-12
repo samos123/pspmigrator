@@ -211,9 +211,9 @@ func TestIngreation(t *testing.T) {
 		Annotations            map[string]string
 		Expected               bool
 	}{
-		{"mutated-pod", []string{"CHOWN"}, map[string]string{}, true},
+		{"mutating-podspec", []string{"CHOWN"}, map[string]string{}, true},
 		{"non-mutated-pod", []string{}, map[string]string{}, false},
-		{"mutated-annotations", []string{}, map[string]string{
+		{"mutating-annotations", []string{}, map[string]string{
 			"seccomp.security.alpha.kubernetes.io/defaultProfileName":  "runtime/default",
 			"seccomp.security.alpha.kubernetes.io/allowedProfileNames": "*",
 		}, true},
