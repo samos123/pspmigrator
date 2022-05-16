@@ -19,10 +19,11 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"path/filepath"
+
+	"github.com/spf13/cobra"
 
 	"github.com/samos123/pspmigrator"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,16 +43,35 @@ import (
 )
 
 func main() {
-	var kubeconfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	var mutatingCmd = &cobra.Command{
+		Use:   "mutating",
+		Short: "Check if pods or PSP objects are mutating",
+		Long: `print is for printing anything back to the screen.
+					  For many years people have printed back to the screen.`,
 	}
-	flag.Parse()
+	mutatingCmd.AddCommand(
+		&cobra.Command{
+			Use:   "pod",
+			Short: "Check if a pod is being mutated by a PSP policy",
+			Run: func(cmd *cobra.Command, args []string) {
+				fmt.Println("check pod mutating")
+			},
+		},
+	)
+	var rootCmd = &cobra.Command{Use: "pspmigrator"}
+	rootCmd.AddCommand(mutatingCmd)
+	var kubeconfig string
+
+	if home := homedir.HomeDir(); home != "" {
+		rootCmd.PersistentFlags().StringVarP(&kubeconfig, "kubeconfig", "k",
+			filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	} else {
+		rootCmd.PersistentFlags().StringVarP(&kubeconfig, "kubeconfig", "k", "", "absolute path to the kubeconfig file")
+	}
+	rootCmd.Execute()
 
 	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		panic(err.Error())
 	}
