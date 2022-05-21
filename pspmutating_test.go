@@ -35,10 +35,6 @@ var (
 	clientset *kubernetes.Clientset
 )
 
-func init() {
-	clientset = CreateClientSet()
-}
-
 type PSPOptions struct {
 	Annotations            map[string]string
 	DefaultAddCapabilities []string
@@ -214,6 +210,8 @@ func CreateDeployment(name string) *appsv1.Deployment {
 func TestIngreation(t *testing.T) {
 	// TODO have CI that deploys K8s cluster for testing
 	skipCI(t)
+
+	clientset = CreateClientSet()
 	cases := []struct {
 		Name                   string
 		DefaultAddCapabilities []string
