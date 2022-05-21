@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"strconv"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/samos123/pspmigrator"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -66,6 +69,9 @@ func initMutating() {
 		Use:   "pods",
 		Short: "Check all pods across all namespaces in a cluster are being mutated by a PSP policy",
 		Run: func(cmd *cobra.Command, args []string) {
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetHeader([]string{"Name", "Namespace", "Mutated", "PSP"})
+
 			pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
 			if err != nil {
 				panic(err.Error())
@@ -73,13 +79,14 @@ func initMutating() {
 			fmt.Printf("There are %d pods in the cluster\n", len(pods.Items))
 			for _, pod := range pods.Items {
 				if pspName, ok := pod.ObjectMeta.Annotations["kubernetes.io/psp"]; ok {
-					mutated, diff, err := pspmigrator.IsPodBeingMutatedByPSP(&pod, clientset)
+					mutated, _, err := pspmigrator.IsPodBeingMutatedByPSP(&pod, clientset)
 					if err != nil {
 						log.Println("error occured checking if pod is mutated:", err)
 					}
-					fmt.Printf("Pod %v is mutated by PSP %v: %v, diff: %v\n", pod.Name, pspName, mutated, diff)
+					table.Append([]string{pod.Name, pod.Namespace, strconv.FormatBool(mutated), pspName})
 				}
 			}
+			table.Render() // Send output
 		},
 		Args: cobra.NoArgs,
 	}
