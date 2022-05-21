@@ -31,6 +31,7 @@ var (
 func init() {
 	initMutating()
 	RootCmd.AddCommand(MutatingCmd)
+	RootCmd.AddCommand(MigrateCmd)
 	var kubeconfig string
 
 	if home := homedir.HomeDir(); home != "" {

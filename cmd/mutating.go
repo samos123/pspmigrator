@@ -14,8 +14,6 @@ import (
 var MutatingCmd = &cobra.Command{
 	Use:   "mutating",
 	Short: "Check if pods or PSP objects are mutating",
-	Long: `print is for printing anything back to the screen.
-					  For many years people have printed back to the screen.`,
 }
 
 func initMutating() {

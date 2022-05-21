@@ -3,13 +3,11 @@ package pspmigrator
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/go-test/deep"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/policy/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -32,6 +30,8 @@ func GetPSPAnnotations(annotations map[string]string) map[string]string {
 	return pspAnnotations
 }
 
+// IsPodBeingMutatedByPSP returns whether a pod is likely mutated by a PSP object. It also returns the difference
+// of the securityContext attribute between the parent controller (e.g. Deployment) and the running pod.
 func IsPodBeingMutatedByPSP(pod *v1.Pod, clientset *kubernetes.Clientset) (mutating bool, diff []string, err error) {
 	diff = make([]string, 0)
 	if len(pod.ObjectMeta.OwnerReferences) > 0 {
@@ -74,47 +74,6 @@ func IsPodBeingMutatedByPSP(pod *v1.Pod, clientset *kubernetes.Clientset) (mutat
 		return true, diff, nil
 	}
 	return false, diff, nil
-}
-
-func IsPodBeingMutatedByPSPOld(pod *v1.Pod, clientset *kubernetes.Clientset) (bool, error) {
-	// check if associated PSP object is using any mutating fields
-	// if yes then lookup ownerReferences and see if the field is actually mutating
-	// if no continue check for next pod
-	if pspName, ok := pod.ObjectMeta.Annotations["kubernetes.io/psp"]; ok {
-		pspObj, err := clientset.PolicyV1beta1().PodSecurityPolicies().Get(context.TODO(), pspName, metav1.GetOptions{})
-		if errors.IsNotFound(err) {
-			return false, fmt.Errorf("PodSecurityPolicy %s not found: %w\n", pspName, err)
-		} else if err != nil {
-			return false, fmt.Errorf("Error getting PodSecurityPolicy %s: %w\n",
-				pspName, err)
-		} else if err != nil {
-			mutating, fields, annotations := IsPSPMutating(pspObj)
-			if mutating == false {
-				return false, nil
-			}
-			fmt.Println(fields, annotations)
-			// Lookup ownerReferences and compare pod spec with owner pod spec
-			if len(pod.ObjectMeta.OwnerReferences) > 0 {
-				var owner metav1.OwnerReference
-				for _, reference := range pod.ObjectMeta.OwnerReferences {
-					if reference.Controller != nil && *reference.Controller == true {
-						owner = reference
-						break
-					}
-				}
-				if owner.Kind == "ReplicaSet" {
-					rs, err := clientset.AppsV1().ReplicaSets(pod.Namespace).Get(context.TODO(), owner.Name, metav1.GetOptions{})
-					if err != nil {
-						return false, err
-					}
-					parentPodSpec := rs.Spec.Template.Spec
-					log.Println(parentPodSpec)
-				}
-				return true, nil
-			}
-		}
-	}
-	return false, nil
 }
 
 // IsPSPMutating checks wheter a PodSecurityPolicy is potentially mutating
