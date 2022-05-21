@@ -25,6 +25,7 @@ var RootCmd = &cobra.Command{
 var (
 	clientset *kubernetes.Clientset
 	err       error
+	Namespace string
 )
 
 func init() {

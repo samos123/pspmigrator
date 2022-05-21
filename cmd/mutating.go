@@ -19,7 +19,6 @@ var MutatingCmd = &cobra.Command{
 }
 
 func initMutating() {
-	var namespace string
 	podCmd := cobra.Command{
 		Use:   "pod [name of pod]",
 		Short: "Check if a pod is being mutated by a PSP policy",
@@ -28,12 +27,12 @@ func initMutating() {
 			// - Use helper functions like e.g. errors.IsNotFound()
 			// - And/or cast to StatusError and use its properties like e.g. ErrStatus.Message
 			pod := args[0]
-			podObj, err := clientset.CoreV1().Pods(namespace).Get(context.TODO(), pod, metav1.GetOptions{})
+			podObj, err := clientset.CoreV1().Pods(Namespace).Get(context.TODO(), pod, metav1.GetOptions{})
 			if errors.IsNotFound(err) {
-				fmt.Printf("Pod %s in namespace %s not found\n", pod, namespace)
+				fmt.Printf("Pod %s in namespace %s not found\n", pod, Namespace)
 			} else if statusError, isStatus := err.(*errors.StatusError); isStatus {
 				fmt.Printf("Error getting pod %s in namespace %s: %v\n",
-					pod, namespace, statusError.ErrStatus.Message)
+					pod, Namespace, statusError.ErrStatus.Message)
 			} else if err != nil {
 				panic(err.Error())
 			} else {
@@ -43,13 +42,26 @@ func initMutating() {
 				}
 				if pspName, ok := podObj.ObjectMeta.Annotations["kubernetes.io/psp"]; ok {
 					fmt.Printf("Pod %v is mutated by PSP %v: %v, diff: %v\n", podObj.Name, pspName, mutated, diff)
+					pspObj, err := clientset.PolicyV1beta1().PodSecurityPolicies().Get(context.TODO(), pspName, metav1.GetOptions{})
+					if errors.IsNotFound(err) {
+						fmt.Printf("PodSecurityPolicy %s not found\n", pspName)
+					} else if statusError, isStatus := err.(*errors.StatusError); isStatus {
+						fmt.Printf("Error getting PodSecurityPolicy %s: %v\n",
+							pspName, statusError.ErrStatus.Message)
+					} else if err != nil {
+						panic(err.Error())
+					} else {
+						_, fields, annotations := pspmigrator.IsPSPMutating(pspObj)
+						fmt.Printf("PSP profile %v has the following mutating fields: %v and annotations: %v\n", pspName, fields, annotations)
+					}
+
 				}
 			}
 		},
 		Args: cobra.ExactArgs(1),
 	}
 
-	podCmd.Flags().StringVarP(&namespace, "namespace", "n", "", "K8s namespace (required)")
+	podCmd.Flags().StringVarP(&Namespace, "namespace", "n", "", "K8s namespace (required)")
 	podCmd.MarkFlagRequired("namespace")
 
 	podsCmd := cobra.Command{
@@ -65,7 +77,7 @@ func initMutating() {
 				if pspName, ok := pod.ObjectMeta.Annotations["kubernetes.io/psp"]; ok {
 					mutated, diff, err := pspmigrator.IsPodBeingMutatedByPSP(&pod, clientset)
 					if err != nil {
-						log.Println(err)
+						log.Println("error occured checking if pod is mutated:", err)
 					}
 					fmt.Printf("Pod %v is mutated by PSP %v: %v, diff: %v\n", pod.Name, pspName, mutated, diff)
 				}
