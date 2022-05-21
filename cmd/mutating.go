@@ -86,6 +86,32 @@ func initMutating() {
 		Args: cobra.NoArgs,
 	}
 
+	pspCmd := cobra.Command{
+		Use:   "psp [name of PSP object]",
+		Short: "Check if a PSP object is potentially mutating pods",
+		Run: func(cmd *cobra.Command, args []string) {
+			// Examples for error handling:
+			// - Use helper functions like e.g. errors.IsNotFound()
+			// - And/or cast to StatusError and use its properties like e.g. ErrStatus.Message
+			pspName := args[0]
+			pspObj, err := clientset.PolicyV1beta1().PodSecurityPolicies().Get(context.TODO(), pspName, metav1.GetOptions{})
+			if errors.IsNotFound(err) {
+				fmt.Printf("PodSecurityPolicy %s not found\n", pspName)
+			} else if statusError, isStatus := err.(*errors.StatusError); isStatus {
+				fmt.Printf("Error getting PodSecurityPolicy %s: %v\n",
+					pspName, statusError.ErrStatus.Message)
+			} else if err != nil {
+				panic(err.Error())
+			} else {
+				_, fields, annotations := pspmigrator.IsPSPMutating(pspObj)
+				fmt.Printf("PSP profile %v has the following mutating fields: %v and annotations: %v\n", pspName, fields, annotations)
+			}
+
+		},
+		Args: cobra.ExactArgs(1),
+	}
+
 	MutatingCmd.AddCommand(&podCmd)
 	MutatingCmd.AddCommand(&podsCmd)
+	MutatingCmd.AddCommand(&pspCmd)
 }
