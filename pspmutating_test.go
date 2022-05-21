@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -69,6 +70,12 @@ func GeneratePSPObject(options PSPOptions) v1beta1.PodSecurityPolicy {
 		log.Panic(err)
 	}
 	return pspObj
+}
+
+func skipCI(t *testing.T) {
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping testing in CI environment")
+	}
 }
 
 func TestIsPSPNotMutating(t *testing.T) {
@@ -201,6 +208,9 @@ func CreateDeployment(name string) *appsv1.Deployment {
 }
 
 func TestIngreation(t *testing.T) {
+	// TODO have CI that deploys K8s cluster for testing
+	skipCI(t)
+
 	clientset = CreateClientSet()
 	cases := []struct {
 		Name                   string
