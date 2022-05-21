@@ -8,9 +8,28 @@ the following features:
 - Detect if a Pod is being mutated by a PSP object
 - TODO: CLI tool to interactively recommend a PodSecurity Standard based on the running pods in a namespace
 
-## Usage
+## Installation
 
-TODO
+```
+go install github.com/samos123/pspmigrator/cmd/pspmigrator
+```
+
+Alternatively, you can download a release from [here](https://github.com/samos123/pspmigrator/releases/latest)
+
+## Usage
+pspmigrator will use your default kubeconfig to authenticate with the cluster.
+You can also specify the kubeconfig you wish to use by using the `-k` flag.
+
+Check if any pods are being mutated by a Pod Security Policy in your K8s cluster:
+```
+pspmigrator mutating pods
+```
+
+Check if a specific pod called `my-pod` in namespace `my-namespace` is being
+mutated by a Pod Security Policy:
+```
+pspmigrator mutating pod my-pod -n my-namespace
+```
 
 ## License
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
