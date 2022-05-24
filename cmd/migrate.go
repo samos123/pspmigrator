@@ -5,10 +5,12 @@ import (
 	"log"
 	"os"
 
+	"github.com/manifoldco/promptui"
 	"github.com/olekukonko/tablewriter"
 	"github.com/samos123/pspmigrator"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
+	psaApi "k8s.io/pod-security-admission/api"
 )
 
 var MigrateCmd = &cobra.Command{
@@ -48,25 +50,46 @@ var MigrateCmd = &cobra.Command{
 		}
 		for _, namespace := range GetNamespaces().Items {
 			suggestions := make(map[string]bool)
-			for _, pod := range GetPodsByNamespace(namespace.Name).Items {
+			pods := GetPodsByNamespace(namespace.Name).Items
+			if len(pods) == 0 {
+				fmt.Printf("There are no pods running in namespace %v. Skipping and going to the next one.\n", namespace.Name)
+				continue
+			}
+			for _, pod := range pods {
 				level, err := pspmigrator.SuggestedPodSecurityStandard(&pod)
 				if err != nil {
 					fmt.Println("error occured checking the suggested pod security standard", err)
 				}
 				suggestions[string(level)] = true
 			}
-			var suggested string
+			var suggested psaApi.Level
 			if suggestions["restricted"] {
-				suggested = "restricted"
+				suggested = psaApi.LevelRestricted
 			}
 			if suggestions["baseline"] {
-				suggested = "baseline"
+				suggested = psaApi.LevelBaseline
 			}
 			if suggestions["privileged"] {
-				suggested = "privileged"
+				suggested = psaApi.LevelPrivileged
 			}
 			fmt.Printf("Suggest using %v in namespace %v\n", suggested, namespace.Name)
+			skipStr := "skip, continue with next namespace"
+			prompt := promptui.Select{
+				Label: fmt.Sprintf("Select control mode for %v on namespace %v", suggested, namespace.Name),
+				Items: []string{"enforce", "audit", skipStr},
+			}
+			_, control, err := prompt.Run()
+			if err != nil {
+				fmt.Println("error occured getting enforcement mode", err)
+			}
+			if control == skipStr {
+				continue
+			}
+			ApplyPSSLevel(&namespace, suggested, control)
+			fmt.Printf("Applied pod security level %v on namespace %v in %v control mode\n", suggested, namespace.Name, control)
+			fmt.Printf("Review the labels by running `kubectl get ns %v -o yaml`\n", namespace.Name)
 		}
+		fmt.Println("Done with migrating namespaces with pods to PSA")
 
 	},
 }
