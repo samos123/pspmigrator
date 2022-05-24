@@ -4,9 +4,10 @@ pspmigrator is a tool to make it easier for K8s users to migrate from
 PodSecurityPolicy (PSP) to PodSecurity Standards/Admission (PSA). The tool has
 the following features:
 
+- CLI tool to interactively migrate you from PSP to PSA by looking
+  at the running pods in a namespace and suggesting a Pod Security Standard
 - Detect if PSP object is potentially mutating Pods
 - Detect if a Pod is being mutated by a PSP object
-- TODO: CLI tool to interactively recommend a PodSecurity Standard based on the running pods in a namespace
 
 ## Installation
 
@@ -17,6 +18,20 @@ go install github.com/samos123/pspmigrator/cmd/pspmigrator
 Alternatively, you can download a release from [here](https://github.com/samos123/pspmigrator/releases/latest)
 
 ## Usage
+Start the migration from PSP to PSA
+```
+pspmigrator migrate
+# example output
+Checking if any pods are being mutated by a PSP object
+Suggest using baseline in namespace default
+✔ enforce
+Applied pod security level baseline on namespace default in enforce control mode
+Review the labels by running `kubectl get ns default -o yaml`
+There are no pods running in namespace empty. Skipping and going to the next one.
+Done with migrating namespaces with pods to PSA
+```
+
+Full help docs available by running:
 ```
 pspmigrator -h
 pspmigrator is a tool to help migrate from PSP to PSA
