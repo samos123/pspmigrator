@@ -3,8 +3,6 @@ package pspmigrator
 import (
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
-
 	v1 "k8s.io/api/core/v1"
 
 	"k8s.io/pod-security-admission/api"
@@ -13,7 +11,6 @@ import (
 )
 
 func SuggestedPodSecurityStandard(pod *v1.Pod) (psaApi.Level, error) {
-	logger := log.WithFields(log.Fields{"pod.Name": pod.Name, "pod.Namespace": pod.Namespace})
 	evaluator, err := policy.NewEvaluator(policy.DefaultChecks())
 	if err != nil {
 		return "", err
@@ -38,8 +35,6 @@ func SuggestedPodSecurityStandard(pod *v1.Pod) (psaApi.Level, error) {
 			forbiddenReasons = append(forbiddenReasons,
 				fmt.Sprintf("%s: %s, ", result.ForbiddenReasons[i], result.ForbiddenDetails[i]))
 		}
-		logger.WithFields(log.Fields{"level": level, "forbiddenReasons": forbiddenReasons}).Info(
-			"The Pod Security Standard level was too strict. Trying a less strict level")
 	}
 	return api.LevelPrivileged, nil
 }
