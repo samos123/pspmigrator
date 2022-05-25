@@ -1,8 +1,6 @@
 package pspmigrator
 
 import (
-	"fmt"
-
 	v1 "k8s.io/api/core/v1"
 
 	"k8s.io/pod-security-admission/api"
@@ -29,11 +27,6 @@ func SuggestedPodSecurityStandard(pod *v1.Pod) (psaApi.Level, error) {
 
 		if result.Allowed {
 			return apiLevel, nil
-		}
-		forbiddenReasons := make([]string, len(result.ForbiddenReasons))
-		for i := range result.ForbiddenReasons {
-			forbiddenReasons = append(forbiddenReasons,
-				fmt.Sprintf("%s: %s, ", result.ForbiddenReasons[i], result.ForbiddenDetails[i]))
 		}
 	}
 	return api.LevelPrivileged, nil
