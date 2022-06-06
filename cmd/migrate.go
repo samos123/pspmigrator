@@ -44,8 +44,8 @@ var MigrateCmd = &cobra.Command{
 			table.Render()
 			pod := mutatedPods[0]
 			fmt.Printf("There were %v pods mutated. Please modify the PodSpec such that PSP no longer needs to mutate your pod.\n", len(mutatedPods))
-			fmt.Printf("You can for `pspmigrator mutating pod %v -n %v` to learn more why and how your pod is being mutated.", pod.Name, pod.Namespace)
-			fmt.Printf("Please re-run the tool again after you've modified your PodSpecs.")
+			fmt.Printf("You can run `pspmigrator mutating pod %v -n %v` to learn more why and how your pod is being mutated. ", pod.Name, pod.Namespace)
+			fmt.Printf("Please re-run the tool again after you've modified your PodSpecs.\n")
 			os.Exit(1)
 		}
 		for _, namespace := range GetNamespaces().Items {
