@@ -76,6 +76,7 @@ PSP profile my-psp has the following mutating fields: [DefaultAddCapabilities] a
 ```
 
 ## Demo
+Watch the video demo:
 [![Watch the video](https://img.youtube.com/vi/UITKPy-q1B0/default.jpg)](https://youtu.be/UITKPy-q1B0)
 
 ## License
