@@ -75,5 +75,8 @@ Pod nginx-nonpriv-66b6c48dd5-rl6jt is mutated by PSP my-psp: true, diff: [slice[
 PSP profile my-psp has the following mutating fields: [DefaultAddCapabilities] and annotations: []
 ```
 
+## Demo
+[![Watch the video](https://img.youtube.com/vi/UITKPy-q1B0/default.jpg)](https://youtu.be/UITKPy-q1B0)
+
 ## License
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
